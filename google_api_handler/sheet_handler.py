@@ -33,9 +33,12 @@ class shClients:
             import os
             
             # Read credentials from Streamlit secrets
-            raw_creds = dict(st.secrets["google_oauth"])
-            # Ensure nested AttrDicts are converted to regular dicts for JSON serialization
-            creds_dict = {k: dict(v) if isinstance(v, dict) else v for k, v in raw_creds.items()}
+            def _convert_secrets(obj):
+                if hasattr(obj, "items"):
+                    return {k: _convert_secrets(v) for k, v in obj.items()}
+                return obj
+                
+            creds_dict = _convert_secrets(st.secrets["google_oauth"])
             
             # Create a temporary file to store the credentials so gspread can read it
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
