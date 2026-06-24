@@ -20,7 +20,34 @@ class shClients:
 
     def __init__(self):
         # TODO: Credentials is a json that contains the key for google API auth. This is currently linked to nagendrar@riderriver.com account. Needs to be moved to a general account
-        self.shClient = gspread.oauth(credentials_filename="oauth_creds.json")
+        creds_file = "oauth_creds.json"
+        
+        # If running locally, the file will exist
+        if Path(creds_file).exists() or Path("utility_scripts/google_api_handler/" + creds_file).exists():
+            self.shClient = gspread.oauth(credentials_filename=creds_file)
+        else:
+            # If running on Streamlit Cloud, read from st.secrets and create a temp file
+            import streamlit as st
+            import json
+            import tempfile
+            import os
+            
+            # Read credentials from Streamlit secrets
+            creds_dict = dict(st.secrets["google_oauth"])
+            
+            # Create a temporary file to store the credentials so gspread can read it
+            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
+                json.dump(creds_dict, f)
+                temp_creds_path = f.name
+                
+            self.shClient = gspread.oauth(credentials_filename=temp_creds_path)
+            
+            # Clean up the temp file after authentication
+            try:
+                os.remove(temp_creds_path)
+            except Exception:
+                pass
+
         self.shMan = None
 
     @property
