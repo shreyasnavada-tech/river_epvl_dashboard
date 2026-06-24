@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+// Main service for RideMetric
+service RideMetric {
+    // This is a service for Ridemetric requests
+    rpc pollTestStatus (testRequest) returns (testResponse) {};
+}
+
+// This is the payload to trigger a test start
+message testRequest {
+    string startTest = 1;
+}
+
+// This is the payload to report the status of the test
+message testResponse {
+    string testStatus = 1;
+    string testStarted = 2;
+}
+
+// Command to generate grpc py files
+// python -m grpc_tools.protoc --proto_path=. rideMetrics.proto --python_out=. --grpc_python_out=.
