@@ -32,26 +32,46 @@ class shClients:
             import tempfile
             import os
             
-            # Read credentials from Streamlit secrets
             def _convert_secrets(obj):
                 if hasattr(obj, "items"):
                     return {k: _convert_secrets(v) for k, v in obj.items()}
                 return obj
+
+            # Option A: They provided a Service Account (Industry Standard for Streamlit)
+            if "gcp_service_account" in st.secrets:
+                sa_info = _convert_secrets(st.secrets["gcp_service_account"])
+                self.shClient = gspread.service_account_from_dict(sa_info)
                 
-            creds_dict = _convert_secrets(st.secrets["google_oauth"])
-            
-            # Create a temporary file to store the credentials so gspread can read it
-            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
-                json.dump(creds_dict, f)
-                temp_creds_path = f.name
+            # Option B: They provided the OAuth Client ID
+            elif "google_oauth" in st.secrets:
+                creds_dict = _convert_secrets(st.secrets["google_oauth"])
                 
-            self.shClient = gspread.oauth(credentials_filename=temp_creds_path)
-            
-            # Clean up the temp file after authentication
-            try:
-                os.remove(temp_creds_path)
-            except Exception:
-                pass
+                with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
+                    json.dump(creds_dict, f)
+                    temp_creds_path = f.name
+                
+                # If they also provided the saved browser token, use it!
+                if "google_token" in st.secrets:
+                    token_dict = _convert_secrets(st.secrets["google_token"])
+                    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
+                        json.dump(token_dict, f)
+                        temp_token_path = f.name
+                    self.shClient = gspread.oauth(credentials_filename=temp_creds_path, authorized_user_filename=temp_token_path)
+                    try:
+                        os.remove(temp_token_path)
+                    except Exception:
+                        pass
+                else:
+                    # Without a token, gspread will try to open a browser (which fails on Streamlit)
+                    self.shClient = gspread.oauth(credentials_filename=temp_creds_path)
+                
+                # Clean up the temp file after authentication
+                try:
+                    os.remove(temp_creds_path)
+                except Exception:
+                    pass
+            else:
+                raise KeyError("Could not find Google credentials in st.secrets. Please add 'gcp_service_account' or 'google_oauth'.")
 
         self.shMan = None
 
