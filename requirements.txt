@@ -26,7 +26,6 @@ grpcio
 dash==3.3.0
 npTDMS
 tqdm
-gc
 pyarrow
 polars
 canmatrix
